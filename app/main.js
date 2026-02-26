@@ -1,61 +1,75 @@
 import { getUsers, getPostsByUser } from './api.js';
 import { state, applyFilter } from './state.js';
-import { renderUsers, renderPosts, setLoading, showAlert } from './ui.js';
+import * as ui from './ui.js';
 
-const userSelect = document.getElementById('userSelect');
 const searchInput = document.getElementById('searchInput');
+const userSelect = document.getElementById('userSelect');
+const alertContainer = document.getElementById('alertContainer');
 const reloadBtn = document.getElementById('reloadBtn');
+let debounceTimer;
 
-// 1. Initial Load: Get Users
-function init() {
-    setLoading(true);
-    getUsers()
-        .then(users => renderUsers(users))
-        .catch(err => showAlert(err.message))
-        .finally(() => setLoading(false));
+function updateView() {
+    const start = (state.currentPage - 1) * state.postsPerPage;
+    const end = start + state.postsPerPage;
+    const pagedPosts = state.filteredPosts.slice(start, end);
+    
+    ui.renderPosts(pagedPosts);
+    ui.renderPagination(state.filteredPosts.length, state.currentPage, (newPage) => {
+        state.currentPage = newPage;
+        updateView();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
 }
 
-// 2. Event: Change User
-userSelect.addEventListener('change', (e) => {
-    const userId = e.target.value;
+function loadPosts(userId) {
     if (!userId) return;
-
-    state.selectedUserId = userId;
-    setLoading(true);
-    
+    ui.setLoading(true);
     getPostsByUser(userId)
         .then(data => {
             state.allPosts = data;
             state.filteredPosts = data;
-            renderPosts(state.filteredPosts);
+            state.currentPage = 1;
+            updateView();
         })
-        .catch(err => showAlert(err.message))
-        .finally(() => setLoading(false));
+        .catch(err => ui.showAlert(err.message))
+        .finally(() => ui.setLoading(false));
+}
+
+// Global Event Listeners
+userSelect.addEventListener('change', (e) => {
+    state.selectedUserId = e.target.value;
+    loadPosts(state.selectedUserId);
 });
 
-// 3. Event: Search (Filter)
 searchInput.addEventListener('input', (e) => {
-    state.searchText = e.target.value;
-    state.filteredPosts = applyFilter(state.allPosts, state.searchText);
-    renderPosts(state.filteredPosts);
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        state.filteredPosts = applyFilter(state.allPosts, e.target.value);
+        state.currentPage = 1;
+        updateView();
+    }, 300);
 });
 
-// 4. Event: Reload
+alertContainer.addEventListener('click', (e) => {
+    if (e.target.id === 'retryBtn') {
+        loadPosts(state.selectedUserId || null);
+    }
+});
+
 reloadBtn.addEventListener('click', () => {
     if (state.selectedUserId) {
-        userSelect.dispatchEvent(new Event('change'));
+        loadPosts(state.selectedUserId);
     } else {
         init();
     }
 });
-document.getElementById('alertContainer').addEventListener('click', (e) => {
-    if (e.target.id === 'retryBtn') {
-        const userId = document.getElementById('userSelect').value;
-        if (userId) {
-            document.getElementById('userSelect').dispatchEvent(new Event('change'));
-        } else {
-            init(); 
-        }
-    }
-});
+
+function init() {
+    ui.setLoading(true);
+    getUsers()
+        .then(users => ui.renderUsers(users))
+        .catch(err => ui.showAlert(err.message))
+        .finally(() => ui.setLoading(false));
+}
+
 init();
