@@ -48,5 +48,14 @@ reloadBtn.addEventListener('click', () => {
         init();
     }
 });
-
+document.getElementById('alertContainer').addEventListener('click', (e) => {
+    if (e.target.id === 'retryBtn') {
+        const userId = document.getElementById('userSelect').value;
+        if (userId) {
+            document.getElementById('userSelect').dispatchEvent(new Event('change'));
+        } else {
+            init(); 
+        }
+    }
+});
 init();

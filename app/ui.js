@@ -31,11 +31,14 @@ export const setLoading = (isLoading) => {
     if (isLoading) postsGrid.innerHTML = '';
 };
 
-export const showAlert = (message, type = 'danger') => {
+export const showAlert = (message) => {
+    const alertContainer = document.getElementById('alertContainer');
     alertContainer.innerHTML = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        <div class="alert alert-danger d-flex justify-content-between align-items-center" role="alert">
+            <div>
+                <strong>Error!</strong> ${message}
+            </div>
+            <button id="retryBtn" class="btn btn-danger btn-sm">Retry</button>
         </div>
     `;
 };
